@@ -1,0 +1,14 @@
+{
+  "name": "billing",
+  "federation": {
+    "exports": ["billing"],
+    "dependencies": {
+      "auth": {
+        "source": "../likec4-demo-registry"
+      }
+    },
+    "publish": {
+      "registryDir": "../likec4-demo-registry"
+    }
+  }
+}

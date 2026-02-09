@@ -1,0 +1,38 @@
+specification {
+  element service
+  element component
+  element database
+  element gateway
+}
+
+import auth from 'auth'
+
+model {
+  service billing 'Billing & Payments' {
+    description 'Invoicing, subscriptions, and payment processing'
+
+    component api 'Billing API' {
+      technology 'REST'
+    }
+    component invoices 'Invoice Engine'
+    gateway stripe 'Stripe' {
+      description 'Payment processing'
+    }
+    database ledger 'Ledger' {
+      technology 'PostgreSQL'
+    }
+  }
+
+  billing.api -> auth.api 'authenticates requests'
+  billing.api -> billing.invoices 'generates invoices'
+  billing.invoices -> billing.ledger 'records transactions'
+  billing.invoices -> billing.stripe 'processes payments'
+}
+
+views {
+  view billingOverview of billing {
+    title 'Billing Service'
+    include *, auth, auth.api
+    autoLayout TopBottom
+  }
+}
