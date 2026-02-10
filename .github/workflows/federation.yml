@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
 
+env:
+  # Change to 'main' once federation ships to upstream likec4
+  LIKEC4_REF: feat/federated-registry
+  LIKEC4_REPO: brukhabtu/likec4
+
 jobs:
   composition-check:
     if: github.event_name == 'pull_request'
@@ -17,14 +22,25 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build likec4 CLI from fork
+        run: |
+          git clone --depth 1 --branch $LIKEC4_REF https://github.com/$LIKEC4_REPO.git /tmp/likec4
+          cd /tmp/likec4
+          HUSKY=0 pnpm install --frozen-lockfile
+          pnpm generate
+          pnpm --filter @likec4/core --filter @likec4/config --filter @likec4/federation --filter @likec4/language-server --filter @likec4/layouts --filter @likec4/generators --filter likec4 build
+          echo "LIKEC4_CLI=/tmp/likec4/packages/likec4/bin/likec4" >> "$GITHUB_ENV"
 
       - name: Read version
         id: version
         run: echo "value=$(cat version)" >> "$GITHUB_OUTPUT"
 
       - name: Build manifest
-        run: npx likec4 federation build . --version ${{ steps.version.outputs.value }} --output manifest.json
+        run: node $LIKEC4_CLI federation build . --version ${{ steps.version.outputs.value }} --output manifest.json
 
       - name: Fetch registry
         run: curl -fsSL https://raw.githubusercontent.com/brukhabtu/likec4-demo-registry/main/registry.json -o registry.json
@@ -70,14 +86,25 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build likec4 CLI from fork
+        run: |
+          git clone --depth 1 --branch $LIKEC4_REF https://github.com/$LIKEC4_REPO.git /tmp/likec4
+          cd /tmp/likec4
+          HUSKY=0 pnpm install --frozen-lockfile
+          pnpm generate
+          pnpm --filter @likec4/core --filter @likec4/config --filter @likec4/federation --filter @likec4/language-server --filter @likec4/layouts --filter @likec4/generators --filter likec4 build
+          echo "LIKEC4_CLI=/tmp/likec4/packages/likec4/bin/likec4" >> "$GITHUB_ENV"
 
       - name: Read version
         id: version
         run: echo "value=$(cat version)" >> "$GITHUB_OUTPUT"
 
       - name: Build manifest
-        run: npx likec4 federation build . --version ${{ steps.version.outputs.value }} --output manifest.json
+        run: node $LIKEC4_CLI federation build . --version ${{ steps.version.outputs.value }} --output manifest.json
 
       - name: Read manifest for dispatch
         id: manifest
