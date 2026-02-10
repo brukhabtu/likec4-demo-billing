@@ -33,7 +33,7 @@ jobs:
           HUSKY=0 pnpm install --frozen-lockfile
           pnpm generate
           pnpm --filter @likec4/core --filter @likec4/config --filter @likec4/federation --filter @likec4/language-server --filter @likec4/layouts --filter @likec4/generators --filter likec4 build
-          echo "LIKEC4_CLI=/tmp/likec4/packages/likec4/bin/likec4" >> "$GITHUB_ENV"
+          echo "LIKEC4_CLI=/tmp/likec4/packages/likec4/bin/likec4.mjs" >> "$GITHUB_ENV"
 
       - name: Read version
         id: version
@@ -97,7 +97,7 @@ jobs:
           HUSKY=0 pnpm install --frozen-lockfile
           pnpm generate
           pnpm --filter @likec4/core --filter @likec4/config --filter @likec4/federation --filter @likec4/language-server --filter @likec4/layouts --filter @likec4/generators --filter likec4 build
-          echo "LIKEC4_CLI=/tmp/likec4/packages/likec4/bin/likec4" >> "$GITHUB_ENV"
+          echo "LIKEC4_CLI=/tmp/likec4/packages/likec4/bin/likec4.mjs" >> "$GITHUB_ENV"
 
       - name: Read version
         id: version
