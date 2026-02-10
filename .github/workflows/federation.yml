@@ -1,0 +1,92 @@
+name: Federation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  composition-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: Read version
+        id: version
+        run: echo "value=$(cat version)" >> "$GITHUB_OUTPUT"
+
+      - name: Build manifest
+        run: npx likec4 federation build . --version ${{ steps.version.outputs.value }} --output manifest.json
+
+      - name: Fetch registry
+        run: curl -fsSL https://raw.githubusercontent.com/brukhabtu/likec4-demo-registry/main/registry.json -o registry.json
+
+      - name: Check for breaking changes
+        run: |
+          node -e '
+          const fs = require("fs");
+          const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+          const registry = JSON.parse(fs.readFileSync("registry.json", "utf8"));
+
+          const provider = "billing";
+          const manifestElements = new Set(Object.keys(manifest.elements || {}));
+          let breaking = false;
+
+          for (const [name, consumer] of Object.entries(registry.consumers || {})) {
+            const importedFqns = (consumer.imports || {})[provider] || [];
+            if (importedFqns.length === 0) continue;
+
+            for (const fqn of importedFqns) {
+              if (!manifestElements.has(fqn)) {
+                console.error(`BREAKING: Consumer "${name}" imports "${fqn}" from "${provider}", but it no longer exists in the manifest.`);
+                breaking = true;
+              }
+            }
+          }
+
+          if (breaking) {
+            console.error("\nComposition check failed: breaking changes detected.");
+            process.exit(1);
+          } else {
+            console.log("Composition check passed: no breaking changes detected.");
+          }
+          '
+
+  publish:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: Read version
+        id: version
+        run: echo "value=$(cat version)" >> "$GITHUB_OUTPUT"
+
+      - name: Build manifest
+        run: npx likec4 federation build . --version ${{ steps.version.outputs.value }} --output manifest.json
+
+      - name: Read manifest for dispatch
+        id: manifest
+        run: echo "content=$(cat manifest.json | jq -c .)" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch to registry
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.REGISTRY_PAT }}
+          repository: brukhabtu/likec4-demo-registry
+          event-type: manifest-update
+          client-payload: '{"provider": "billing", "version": "${{ steps.version.outputs.value }}", "manifest": ${{ steps.manifest.outputs.content }}}'
